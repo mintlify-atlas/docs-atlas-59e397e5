@@ -1,0 +1,86 @@
+{
+  "projectType": "frontend",
+  "projectName": "3D Portfolio — Namith's Room",
+  "projectDescription": "An interactive 3D bedroom portfolio built with React Three Fiber, where visitors explore a virtual room and click on a PC to view the owner's portfolio website embedded in a monitor.",
+  "theme": "willow",
+  "primaryColor": "#9933ff",
+  "lightColor": "#c27aff",
+  "darkColor": "#6600cc",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Overview",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": ["introduction", "quickstart"]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/3d-scene",
+              "concepts/time-of-day",
+              "concepts/interactions"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Components",
+        "groups": [
+          {
+            "group": "Pages",
+            "pages": [
+              "components/home",
+              "components/loader"
+            ]
+          },
+          {
+            "group": "3D Models",
+            "pages": [
+              "components/computer-scene"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Guides",
+        "groups": [
+          {
+            "group": "Customization",
+            "pages": [
+              "guides/customizing-portfolio",
+              "guides/adding-assets",
+              "guides/deployment"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "guides/tech-stack",
+              "guides/troubleshooting"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Interactive 3D bedroom scene rendered with React Three Fiber and a GLTF model",
+    "Click-to-zoom interaction that focuses on the in-scene monitor showing the live portfolio site",
+    "Dynamic time-of-day lighting system (dawn, morning, evening, dusk, night) using @react-three/drei Environment presets",
+    "Real-time clock display that auto-sets the lighting preset based on the current time",
+    "Smooth GSAP-powered camera animations for position and rotation transitions",
+    "Responsive design with different camera positions for portrait/landscape and various aspect ratios",
+    "Retro pixel-style font and UI overlay with GitHub/LinkedIn social links",
+    "Custom loading screen with responsive desktop/mobile background images"
+  ],
+  "publicApiSurface": [
+    "Computer({ showDetails, periodOfDay }) — 3D bedroom scene component",
+    "Home() — Main page component orchestrating the Canvas, Loader, and UI overlays",
+    "Loader() — Animated loading screen with responsive background",
+    "getPeriodOfDay(hours) — Maps hour of day to an Environment preset name",
+    "MyCameraReactsToStateChanges() — R3F frame hook that locks camera position/rotation",
+    "handleMeshClick(newPosition, newRotation, newMatrix) — Triggers zoom-in animation to the monitor"
+  ]
+}
