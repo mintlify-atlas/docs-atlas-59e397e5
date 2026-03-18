@@ -1,0 +1,165 @@
+---
+title: 'Interactions'
+description: 'Click-to-zoom, keyboard navigation, and responsive camera positions.'
+---
+
+## Overview
+
+The scene supports three interaction modes: clicking on furniture to zoom in, pressing Escape to return to the default view, and automatic camera repositioning when the viewport is resized or the device orientation changes.
+
+## Click to zoom
+
+Every major mesh in the bedroom scene (desk, monitor, PC, keyboard, chair) is wrapped in a group with an `onClick` handler. Clicking any of these triggers `handleMeshClick`:
+
+```jsx src/models/Computer.jsx
+const handleMeshClick = (newPosition, newRotation, newMatrix) => {
+  setMatrixRotation(newMatrix);
+  setTargetPosition(newPosition);
+  setTargetRotation(newRotation);
+  setRotation(false);    // disable drag while zoomed in
+  showDetails(false);    // hide the UI overlay
+};
+```
+
+The click handler on the mesh group determines the correct camera position based on the current aspect ratio before calling `handleMeshClick`:
+
+```jsx src/models/Computer.jsx
+<group onClick={() => {
+  const aspectRatio = window.innerWidth / window.innerHeight;
+  let positionArray = [0, 0, 0];
+
+  if (aspectRatio > 1.62) {
+    positionArray = [-0.84, -0.272, 1.42];   // widescreen
+  } else if (aspectRatio > 0.6666) {
+    positionArray = [-0.83, -0.1, 1];         // standard
+  } else {
+    positionArray = [-0.85, 0, 0.5];          // portrait
+  }
+
+  handleMeshClick(positionArray, [0.13, -Math.PI / 2, 0], [0, 0, 0]);
+}}>
+```
+
+### Aspect ratio to camera position mapping
+
+| Condition | Aspect ratio | Camera position | Layout |
+|-----------|-------------|-----------------|--------|
+| `aspectRatio > 1.62` | e.g. 16:9 ultrawide | `[-0.84, -0.272, 1.42]` | Widescreen |
+| `aspectRatio > 0.6666` | e.g. 4:3, 16:9 | `[-0.83, -0.1, 1]` | Standard |
+| else | portrait / narrow | `[-0.85, 0, 0.5]` | Portrait |
+
+The zoomed-in rotation is always `[0.13, -Math.PI/2, 0]` — slightly tilted down and facing left to center the monitor in the frame.
+
+## GSAP camera animation
+
+Camera position and rotation changes are animated with GSAP rather than applied instantly. Two `useEffect` hooks watch for changes to `targetPosition` and `targetRotation` and drive the animation:
+
+```jsx src/models/Computer.jsx
+// Animate position
+useEffect(() => {
+  if (controlsRef.current) {
+    gsap.to(controlsRef.current.position, {
+      x: targetPosition[0],
+      y: targetPosition[1],
+      z: targetPosition[2],
+      duration: 1,
+    });
+  }
+}, [targetPosition]);
+
+// Animate rotation
+useEffect(() => {
+  if (controlsRef.current) {
+    gsap.to(controlsRef.current.rotation, {
+      x: targetRotation[0],
+      y: targetRotation[1],
+      z: targetRotation[2],
+      duration: 1,
+    });
+  }
+}, [targetRotation]);
+```
+
+Both animations run over 1 second using GSAP's default ease. `controlsRef` points to the `<group>` inside `PresentationControls`, so animating its position and rotation moves the entire scene relative to the fixed camera.
+
+<Tip>
+  GSAP tweens on Three.js object properties work because GSAP directly mutates the numeric properties of `position` and `rotation` objects each frame — no React state updates or re-renders are involved during the animation.
+</Tip>
+
+## Escape key to reset
+
+Pressing `Escape` at any time returns the scene to its default state:
+
+```jsx src/models/Computer.jsx
+useEffect(() => {
+  const handleKeyDown = (event) => {
+    if (event.key === 'Escape') {
+      showDetails(true);                          // restore UI overlay
+      setMatrixRotation([0, 0, 0]);               // reset drag origin
+      setTargetPosition([0, 0, 0]);               // return to default position
+      setTargetRotation([0, -Math.PI / 2 + 0.5, 0]); // restore default rotation
+      setRotation(true);                          // re-enable drag
+    }
+  };
+
+  window.addEventListener('keydown', handleKeyDown);
+  return () => window.removeEventListener('keydown', handleKeyDown);
+}, [showDetails]);
+```
+
+The default resting rotation is `[0, -Math.PI/2 + 0.5, 0]` (approximately −1.07 radians on the Y axis), which angles the bedroom slightly to present the monitor toward the viewer. The GSAP animations described above handle the smooth transition back.
+
+## Orientation change and resize handling
+
+If the user is currently in a zoomed-in view and resizes the browser or rotates their device, the camera position is recalculated to match the new aspect ratio:
+
+```jsx src/models/Computer.jsx
+useEffect(() => {
+  if (isRotatable) return;  // only active while zoomed in
+
+  const handleResize = () => {
+    const newAspectRatio = window.innerWidth / window.innerHeight;
+    let positionArray = [0, 0, 0];
+
+    if (newAspectRatio > 1.62) {
+      positionArray = [-0.84, -0.272, 1.42];
+    } else if (newAspectRatio > 0.6666) {
+      positionArray = [-0.83, -0.1, 1];
+    } else {
+      positionArray = [-0.85, 0, 0.5];
+    }
+
+    handleMeshClick(positionArray, [0.13, -Math.PI / 2, 0], [0, 0, 0]);
+  };
+
+  window.addEventListener('resize', handleResize);
+  window.addEventListener('orientationchange', handleResize);
+
+  return () => {
+    window.removeEventListener('resize', handleResize);
+    window.removeEventListener('orientationchange', handleResize);
+  };
+}, [isRotatable]);
+```
+
+The effect re-runs whenever `isRotatable` changes. When `isRotatable` is `true` (default view), the listeners are not attached — there is no camera to reposition. When the user clicks into the zoomed view (`isRotatable` becomes `false`), the listeners attach and will fire on any subsequent resize or orientation change.
+
+<Note>
+  `orientationchange` is a mobile-specific event that fires when the device is rotated. Listening to both `resize` and `orientationchange` ensures the camera repositions correctly on both desktop (window resize) and mobile (rotation).
+</Note>
+
+## PresentationControls snap behavior
+
+While in the default (non-zoomed) view, `PresentationControls` is enabled and allows the user to drag and rotate the scene. The `snap` prop is set to `true`:
+
+```jsx src/models/Computer.jsx
+<PresentationControls
+  polar={[-Math.PI / 8, Math.PI / 8]}
+  snap={true}
+  cursor={true}
+  rotation={matrixRotation}
+  enabled={isRotatable}
+>
+```
+
+When `snap={true}`, releasing the drag causes the scene to spring back to the `rotation` value provided via the `rotation` prop. In the default view this is `[0, 0, 0]`, so the model always returns to its forward-facing orientation after the user lets go. This ensures the monitor remains visible and the scene does not drift into an awkward angle between interactions.

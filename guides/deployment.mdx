@@ -1,0 +1,192 @@
+---
+title: 'Deployment'
+description: 'Build and deploy the 3D portfolio to Vercel, Netlify, or any static host.'
+keywords: ['deploy', 'Vercel', 'Netlify', 'GitHub Pages', 'build', 'dist', 'static hosting']
+---
+
+The project is a Vite + React SPA. The output of `npm run build` is a static `dist/` folder that can be deployed to any static host.
+
+## Build for production
+
+<CodeGroup>
+
+```bash npm
+npm run build
+```
+
+```bash yarn
+yarn build
+```
+
+```bash pnpm
+pnpm build
+```
+
+</CodeGroup>
+
+Vite compiles and bundles the app into `dist/`:
+
+```
+dist/
+├── index.html
+├── assets/
+│   ├── index-[hash].js
+│   ├── index-[hash].css
+│   └── ... (fonts, images, 3D model)
+```
+
+## Preview the production build locally
+
+Before deploying, verify the build looks correct:
+
+<CodeGroup>
+
+```bash npm
+npm run preview
+```
+
+```bash yarn
+yarn preview
+```
+
+```bash pnpm
+pnpm preview
+```
+
+</CodeGroup>
+
+This starts a local server at `http://localhost:4173` serving the `dist/` folder.
+
+## Deploy to Vercel
+
+Vercel is the easiest option — zero configuration needed for Vite projects.
+
+<Steps>
+  <Step title="Push your code to GitHub">
+    Make sure the project is in a GitHub (or GitLab/Bitbucket) repository.
+  </Step>
+
+  <Step title="Import the repository on Vercel">
+    Go to [vercel.com/new](https://vercel.com/new), click **Add New Project**, and import your repository.
+  </Step>
+
+  <Step title="Confirm the framework preset">
+    Vercel auto-detects Vite. Confirm the settings:
+
+    | Setting | Value |
+    |---|---|
+    | Framework Preset | **Vite** |
+    | Build Command | `vite build` |
+    | Output Directory | `dist` |
+    | Install Command | `npm install` |
+
+    No environment variables are required.
+  </Step>
+
+  <Step title="Deploy">
+    Click **Deploy**. Vercel builds the project and provides a live URL (e.g., `https://your-project.vercel.app`).
+
+    Subsequent pushes to the default branch trigger automatic re-deployments.
+  </Step>
+</Steps>
+
+## Deploy to Netlify
+
+<Steps>
+  <Step title="Connect your repository">
+    Log in to [netlify.com](https://netlify.com), click **Add new site → Import an existing project**, and connect your Git provider.
+  </Step>
+
+  <Step title="Set build settings">
+    | Setting | Value |
+    |---|---|
+    | Branch to deploy | `main` (or your default branch) |
+    | Build command | `npm run build` |
+    | Publish directory | `dist` |
+  </Step>
+
+  <Step title="Deploy">
+    Click **Deploy site**. Netlify builds and publishes the site. Future pushes to the configured branch trigger automatic deploys.
+  </Step>
+</Steps>
+
+## Deploy to GitHub Pages
+
+<Warning>
+This project uses React Router with `BrowserRouter`, which relies on server-side URL rewriting. GitHub Pages is a pure static host and does not rewrite URLs to `index.html`. Navigating directly to a non-root route (e.g., `/projects`) will return a 404.
+</Warning>
+
+There are two workarounds:
+
+<Tabs>
+  <Tab title="HashRouter (simplest)">
+    Replace `BrowserRouter` with `HashRouter` in `src/App.jsx`. Routes will use hash-based URLs (`/#/projects` instead of `/projects`).
+
+    ```jsx src/App.jsx
+    // Before
+    import { BrowserRouter } from 'react-router-dom';
+
+    // After
+    import { HashRouter as BrowserRouter } from 'react-router-dom';
+    ```
+
+    No other changes are needed — the rest of the routing code stays the same.
+  </Tab>
+  <Tab title="404.html redirect workaround">
+    Keep `BrowserRouter` and add a `404.html` at the project root that redirects to `index.html` with the path encoded in a query string, plus a script in `index.html` that decodes it.
+
+    This is a well-known workaround documented at [github.com/rafgraph/spa-github-pages](https://github.com/rafgraph/spa-github-pages).
+  </Tab>
+</Tabs>
+
+<Steps>
+  <Step title="Configure the base path in vite.config.js">
+    If your GitHub Pages site is hosted at a sub-path (e.g., `https://username.github.io/repo-name/`), set the `base` option:
+
+    ```js vite.config.js
+    import { defineConfig } from 'vite';
+    import react from '@vitejs/plugin-react';
+
+    export default defineConfig({
+      plugins: [react()],
+      base: '/repo-name/', // replace with your repository name
+    });
+    ```
+
+    If the site is at the root (user/org pages with a `username.github.io` repo), leave `base` as `'/'` or omit it.
+  </Step>
+
+  <Step title="Build and push to the gh-pages branch">
+    <CodeGroup>
+
+    ```bash npm
+    npm run build
+    npx gh-pages -d dist
+    ```
+
+    ```bash yarn
+    yarn build
+    npx gh-pages -d dist
+    ```
+
+    </CodeGroup>
+
+    This uses the `gh-pages` npm package to push the `dist/` folder to the `gh-pages` branch. Enable GitHub Pages in your repository settings and set the source to the `gh-pages` branch.
+  </Step>
+</Steps>
+
+## Important: iframe CORS and embedding
+
+The 3D monitor renders your portfolio inside an `<iframe>`. The embedded site must permit being framed.
+
+<Warning>
+If the embedded URL responds with the header `X-Frame-Options: DENY` or `Content-Security-Policy: frame-ancestors 'none'`, the monitor will show a blank white rectangle. This is a browser security restriction — the 3D portfolio cannot override it.
+</Warning>
+
+To check whether a URL allows embedding:
+
+```bash
+curl -I https://your-portfolio.vercel.app/ | grep -i 'x-frame-options\|content-security-policy'
+```
+
+If the header is absent or set to `SAMEORIGIN` / `frame-ancestors *`, the iframe will work. Vercel-hosted React apps typically do not set `X-Frame-Options` by default.

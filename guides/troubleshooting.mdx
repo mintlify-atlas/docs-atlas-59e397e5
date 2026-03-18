@@ -1,0 +1,167 @@
+---
+title: 'Troubleshooting'
+description: 'Common issues and how to fix them.'
+keywords: ['troubleshooting', 'blank screen', 'WebGL', 'iframe', 'performance', 'npm install', 'build error']
+---
+
+If something is not working, find your symptom below.
+
+## Loading and rendering
+
+<AccordionGroup>
+  <Accordion title="Blank or white screen on load">
+    The most common cause is a missing or incorrectly pathed GLTF file.
+
+    **Check:**
+    1. Confirm `src/assets/3d/bedroom.glb` exists.
+    2. Open the browser DevTools **Network** tab and look for a failed request to `bedroom.glb` (status 404).
+    3. Check the **Console** tab for errors from `useGLTF`.
+
+    The model loads asynchronously via `useGLTF('./assets/3d/bedroom.glb')`. Until it resolves, the `<Loader>` component is shown. If the file is missing, the loader will hang indefinitely without an error message in the UI.
+
+    **Fix:** Ensure the `.glb` file is in `src/assets/3d/` and that the path string in `Computer.jsx` matches exactly:
+
+    ```jsx src/models/Computer.jsx
+    const { nodes, materials } = useGLTF('./assets/3d/bedroom.glb');
+    // ...
+    useGLTF.preload('./assets/3d/bedroom.glb');
+    ```
+  </Accordion>
+
+  <Accordion title="3D scene not rendering (black canvas or no scene)">
+    This is usually a WebGL support issue.
+
+    **Check:**
+    1. Open [get.webgl.org](https://get.webgl.org) in the same browser to confirm WebGL is enabled.
+    2. On some systems, hardware acceleration is disabled in browser settings. Go to browser **Settings → System** and enable hardware acceleration.
+    3. Try a different browser: Chrome, Edge, and Firefox all support WebGL 2. Safari may have issues with certain WebGL extensions.
+
+    **Check the console** for errors like:
+    - `WebGL context lost` — GPU driver crash; refresh the page.
+    - `THREE.WebGLRenderer: Error creating WebGL context` — hardware acceleration is disabled.
+  </Accordion>
+
+  <Accordion title="iframe on the monitor shows blank">
+    The embedded site is blocking iframes at the HTTP header level.
+
+    **Diagnose:**
+    ```bash
+    curl -I https://your-portfolio-url.com | grep -i 'x-frame-options\|content-security-policy'
+    ```
+
+    - `X-Frame-Options: DENY` → the site refuses all embedding. You cannot override this from the 3D portfolio side.
+    - `X-Frame-Options: SAMEORIGIN` → the site only allows embedding from the same origin. The 3D portfolio on a different domain will be blocked.
+    - No header, or `Content-Security-Policy: frame-ancestors *` → embedding is allowed.
+
+    **Fix:** Use a portfolio URL that does not set a restrictive framing header. Vercel-hosted React/Next.js apps do not add `X-Frame-Options` by default. If you control the embedded site, remove or relax the header.
+  </Accordion>
+</AccordionGroup>
+
+## Scene behavior
+
+<AccordionGroup>
+  <Accordion title="Environment preset not changing / overlay persists">
+    The `ChangingTimeOverlay` is shown for exactly 2 000 ms when the environment switches, then hidden by resetting the `changingTime` state.
+
+    If the overlay persists indefinitely:
+    1. Open DevTools and check for JavaScript errors that may have stopped the `setTimeout` callback.
+    2. Confirm the `setTimeout` that resets `changingTime` is called with `2000`:
+
+    ```js src/models/Computer.jsx
+    setChangingTime(true);
+    setTimeout(() => setChangingTime(false), 2000);
+    ```
+
+    If the preset name passed to `<Environment preset={...} />` is not a valid drei preset string, Three.js may throw and leave the component in a broken state. Valid values are:
+    ```
+    apartment | city | dawn | forest | lobby | night | park | studio | sunset | warehouse
+    ```
+  </Accordion>
+
+  <Accordion title="Poor performance or low FPS">
+    The bedroom GLTF is a high-polygon scene with baked textures, which is GPU-intensive.
+
+    **Things to try:**
+    - Close other browser tabs, especially ones with video or other WebGL content.
+    - Use a device with a dedicated GPU rather than integrated graphics.
+    - Reduce your browser zoom level (lower zoom = fewer pixels to render).
+    - Close browser DevTools — the performance panel adds CPU overhead.
+    - On laptops, plug in to power; many laptops throttle the GPU on battery.
+
+    If you are the developer and want to ship a lighter build, consider:
+    - Re-exporting the GLTF from Blender with Draco compression enabled.
+    - Using [gltf-transform](https://gltf-transform.donmccurdy.com/) to compress textures to KTX2/WebP format.
+  </Accordion>
+
+  <Accordion title="'Click the PC...' text color is hard to read">
+    This is intentional. The prompt text color switches based on the active environment preset:
+
+    - `night` preset → white text (dark background)
+    - All other presets → black text (lighter background)
+
+    If you add a custom environment preset or change the overlay background and the text becomes unreadable, adjust the conditional color logic in `src/pages/Home.jsx`.
+  </Accordion>
+</AccordionGroup>
+
+## Layout and mobile
+
+<AccordionGroup>
+  <Accordion title="Mobile layout issues (content cut off, safe-area problems)">
+    The bottom details container uses `env(safe-area-inset-bottom)` padding to account for iPhone home indicator and Android gesture navigation bar.
+
+    **Check:**
+    1. Confirm the viewport meta tag is present in `index.html`:
+
+    ```html index.html
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    ```
+
+    The `viewport-fit=cover` value is required for `env(safe-area-inset-bottom)` to return a non-zero value on notched/gesture-nav devices.
+
+    2. If the layout still breaks on a specific device, check whether `react-responsive` is correctly detecting the viewport width. The `≤768px` breakpoint switches between `loader.jpg` and `loader-mobile.jpg`.
+  </Accordion>
+</AccordionGroup>
+
+## Installation and build
+
+<AccordionGroup>
+  <Accordion title="npm install errors or peer dependency conflicts">
+    The project requires **Node.js 18 or later**.
+
+    ```bash
+    node --version
+    # Should print v18.x.x or higher
+    ```
+
+    If you see peer dependency conflicts (common when mixing packages that declare overlapping React version requirements), add the `--legacy-peer-deps` flag:
+
+    ```bash
+    npm install --legacy-peer-deps
+    ```
+
+    <Note>
+    `--legacy-peer-deps` instructs npm to use npm 6-style peer dependency resolution, which is more permissive. It is safe to use here because all runtime packages in this project are compatible with React 18.
+    </Note>
+  </Accordion>
+
+  <Accordion title="Build fails with 'cannot find module' or missing asset errors">
+    Vite's build will fail if any statically imported asset does not exist at the referenced path. The assets most likely to be missing after cloning or modifying the project are:
+
+    | Import | Expected path |
+    |---|---|
+    | `bedroom.glb` | `src/assets/3d/bedroom.glb` |
+    | `retro.ttf` | `src/assets/fonts/retro.ttf` |
+    | `loader.jpg` | `src/assets/images/loader.jpg` |
+    | `loader-mobile.jpg` | `src/assets/images/loader-mobile.jpg` |
+
+    **Fix:** Ensure all four files exist at the paths above. They are binary/large files that may not be included in a freshly cloned repository if they were added to `.gitignore`.
+
+    To verify before building:
+
+    ```bash
+    ls src/assets/3d/
+    ls src/assets/fonts/
+    ls src/assets/images/
+    ```
+  </Accordion>
+</AccordionGroup>

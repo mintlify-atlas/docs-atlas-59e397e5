@@ -1,0 +1,171 @@
+---
+title: 'Loader'
+description: 'Animated loading screen shown during the 4-second scene initialization.'
+---
+
+The `Loader` component fills the viewport while the `Home` page initialises the GLTF bedroom model and all assets. It is rendered when `isLoading === true` — a window that lasts approximately 4 seconds after the page first mounts.
+
+## Visual structure
+
+```
+┌─────────────────────────────────┐
+│  (full-screen background image) │
+│                                 │
+│       ┌─────────────────┐       │
+│       │  home.gif icon  │       │
+│       │  Loader text    │       │
+│       │  Copyright line │       │
+│       └─────────────────┘       │
+│                                 │
+└─────────────────────────────────┘
+```
+
+Three nested `div` elements produce this layout:
+
+| Class | Role |
+|---|---|
+| `loader-container` | Full-viewport wrapper, establishes stacking context |
+| `background-image` | Absolutely-positioned layer showing the background JPEG |
+| `loader-content` | Centred column: icon, text, and copyright |
+
+## Two-phase loading text
+
+The loader text changes once during its lifetime to give the user a sense of progress.
+
+<Steps>
+  <Step title="Phase 1 — 0 to 2 050 ms">
+    Initial text: **"Checking Time Of Day ..."**
+
+    This runs immediately on mount before any `setTimeout` has fired.
+  </Step>
+  <Step title="Phase 2 — 2 050 ms onward">
+    Text transitions to: **"Building My Room ..."**
+
+    Triggered by a `setTimeout` with a 2 050 ms delay:
+
+    ```jsx loader-text.jsx
+    useEffect(() => {
+      const timeoutId = setTimeout(() => {
+        setLoaderText('Building My Room ...');
+      }, 2050);
+      return () => clearTimeout(timeoutId);
+    }, []);
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  The parent `Home` component clears the loader after 4 000 ms. The two-phase text therefore always completes its full sequence before the Canvas appears.
+</Note>
+
+## Responsive background image
+
+Two source images are bundled for different screen sizes:
+
+| Condition | Image used |
+|---|---|
+| Viewport width > 768 px | `src/assets/images/loader.jpg` (desktop) |
+| Viewport width ≤ 768 px | `src/assets/images/loader-mobile.jpg` (mobile) |
+
+The selection is handled by a `resize` listener that fires on mount and on every subsequent resize event:
+
+```jsx responsive-bg.jsx
+useEffect(() => {
+  const handleResize = () => {
+    if (window.innerWidth <= 768) {
+      setBackgroundImage(loaderMobileImage);
+    } else {
+      setBackgroundImage(loaderImage);
+    }
+  };
+  handleResize();                                    // run immediately
+  window.addEventListener('resize', handleResize);
+  return () => window.removeEventListener('resize', handleResize);
+}, []);
+```
+
+<Tip>
+  The cleanup function removes the event listener when the component unmounts (i.e. when `isLoading` flips to `false`), preventing a stale-closure memory leak.
+</Tip>
+
+## Icon
+
+A 50 × 50 px animated GIF (`src/assets/icons/home.gif`) is rendered above the loader text:
+
+```jsx icon.jsx
+<img src={homeLogo} alt="loading..." style={{ width: '50px', height: '50px' }} />
+```
+
+## Copyright line
+
+A static attribution line rendered below the loader text with the `copyright` CSS class:
+
+```text
+Created and Designed by Namith © 2024
+```
+
+## CSS classes
+
+<AccordionGroup>
+  <Accordion title="loader-container">
+    Full-screen wrapper (`width: 100vw; height: 100vh`). Establishes a positioning context for the absolutely-placed `background-image` layer. Defined in `Loader.css`.
+  </Accordion>
+
+  <Accordion title="background-image">
+    Absolutely-positioned layer that covers the entire container. Its `background-image` CSS property is set via an inline style driven by React state, allowing the responsive swap to happen without a CSS class change.
+  </Accordion>
+
+  <Accordion title="loader-content">
+    Flexbox column centred both horizontally and vertically on top of the background layer. Contains the icon, text, and copyright elements.
+  </Accordion>
+
+  <Accordion title="loader-text">
+    Styles the two-phase loading message. Typically a large, prominent font with appropriate color contrast against the background image.
+  </Accordion>
+
+  <Accordion title="copyright">
+    Small, muted text at the bottom of the content block. The `pb-2 text-center` Tailwind utilities are applied inline alongside this class.
+  </Accordion>
+</AccordionGroup>
+
+## Customising for your own fork
+
+<Steps>
+  <Step title="Replace the background images">
+    Swap out `src/assets/images/loader.jpg` and `src/assets/images/loader-mobile.jpg` with your own images. Keep the same file names, or update the import paths at the top of `Loader.jsx`:
+
+    ```jsx loader-imports.jsx
+    import loaderImage       from '../assets/images/loader.jpg';
+    import loaderMobileImage from '../assets/images/loader-mobile.jpg';
+    ```
+  </Step>
+
+  <Step title="Adjust the mobile breakpoint">
+    The breakpoint defaults to `768` px. Change the constant in the `handleResize` function to match your design system:
+
+    ```jsx breakpoint.jsx
+    if (window.innerWidth <= 768) { // change 768 to your preferred breakpoint
+      setBackgroundImage(loaderMobileImage);
+    }
+    ```
+  </Step>
+
+  <Step title="Update the loading text">
+    Edit the initial `useState` value and the `setTimeout` callback in `Loader.jsx` to reflect your own project name:
+
+    ```jsx loader-text-custom.jsx
+    const [loaderText, setLoaderText] = useState('Starting your app ...');
+
+    // inside useEffect:
+    setLoaderText('Loading assets ...');
+    ```
+  </Step>
+
+  <Step title="Replace the icon">
+    Swap `src/assets/icons/home.gif` with any image or GIF. Update the import and the `src` prop on the `<img>` tag in `Loader.jsx`.
+  </Step>
+</Steps>
+
+<Warning>
+  The `Loader` is unmounted after 4 000 ms by `Home`. If your assets take longer to load, increase the `loadingTimer` timeout in `Home.jsx` as well as the phase-2 text delay in `Loader.jsx` so the two stay in sync.
+</Warning>

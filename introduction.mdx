@@ -1,0 +1,72 @@
+---
+title: "Introduction"
+description: "An interactive 3D bedroom portfolio built with React Three Fiber — explore a virtual room and click on the PC to view the live portfolio."
+---
+
+# Welcome to Namith's Room
+
+**3D Portfolio** is an immersive, browser-based experience built entirely in React. Instead of a traditional portfolio page, visitors are dropped into a fully rendered 3D bedroom where they can look around, interact with objects, and dive into the portfolio by clicking on the in-room PC monitor.
+
+<CardGroup cols={2}>
+  <Card title="Quick start" icon="rocket" href="/quickstart">
+    Clone the repo and run the dev server in under two minutes.
+  </Card>
+  <Card title="3D scene" icon="cube" href="/concepts/3d-scene">
+    Understand how the bedroom GLTF model is rendered with React Three Fiber.
+  </Card>
+  <Card title="Time of day" icon="sun" href="/concepts/time-of-day">
+    Learn how lighting automatically adapts to the real-world time.
+  </Card>
+  <Card title="Interactions" icon="hand-pointer" href="/concepts/interactions">
+    See how click-to-zoom and keyboard navigation work.
+  </Card>
+</CardGroup>
+
+## What makes this portfolio different
+
+Most developer portfolios are static web pages. This one is a 3D room you can actually explore.
+
+| Feature | Description |
+|---|---|
+| Interactive 3D scene | A detailed bedroom GLTF model rendered at full screen with `@react-three/fiber` |
+| Live monitor embed | Click the PC to zoom in and see the real portfolio site inside the monitor via an `<iframe>` |
+| Dynamic lighting | Five environment presets (dawn, morning, evening, dusk, night) that change based on your local clock |
+| GSAP animations | Smooth position and rotation transitions when zooming into or out of the monitor |
+| Responsive layout | Camera positions and UI scaling adapt to widescreen, standard, and portrait viewports |
+| Retro aesthetic | Custom pixel-font UI overlays with a live clock and social links |
+
+## Tech stack at a glance
+
+```
+React 18 + Vite
+@react-three/fiber   — React renderer for Three.js
+@react-three/drei    — Helpers: Environment, PresentationControls, Html, useGLTF
+gsap                 — Camera animation
+react-router-dom     — Client-side routing
+Tailwind CSS         — Utility classes for the 2D UI overlay
+```
+
+<Note>
+  The portfolio embeds `https://namith.vercel.app/` inside the 3D monitor. To fork this project for your own use, update the `src` of the `<iframe>` in `src/models/Computer.jsx`.
+</Note>
+
+## Project structure
+
+```
+src/
+├── App.jsx                 # Router root
+├── pages/
+│   ├── Home.jsx            # Main experience: Canvas + UI overlay
+│   ├── Home.css            # Retro font + pulsing animation styles
+│   └── Projects.jsx        # Placeholder projects page
+├── components/
+│   ├── Loader.jsx          # Loading screen (responsive background images)
+│   └── Loader.css
+├── models/
+│   └── Computer.jsx        # 3D bedroom scene + click interaction logic
+└── assets/
+    ├── 3d/bedroom.glb      # The main GLTF model
+    ├── fonts/retro.ttf
+    ├── icons/              # GitHub, LinkedIn, clock GIF, home GIF
+    └── images/             # Loader background images (desktop + mobile)
+```

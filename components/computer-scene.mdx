@@ -1,0 +1,222 @@
+---
+title: 'Computer scene'
+description: 'The 3D bedroom GLTF model, interactive mesh group, and embedded portfolio monitor.'
+---
+
+The `Computer` component (exported from `src/models/Computer.jsx`) is the centrepiece of the portfolio. It loads a GLTF bedroom scene, exposes an interactive desk group the user can click to zoom into, and embeds a live `<iframe>` of the portfolio website inside the in-scene monitor.
+
+## Props
+
+<ParamField path="showDetails" type="function" required>
+  Setter forwarded from `Home`. Called with `false` when the user clicks the desk group to zoom in, hiding the 2D HUD overlay. Called with `true` on Escape to restore the overlay.
+</ParamField>
+
+<ParamField path="periodOfDay" type="string" required>
+  One of `'sunset'`, `'park'`, `'warehouse'`, `'dawn'`, `'night'`. Passed directly to `<Environment preset={periodOfDay} />` from `@react-three/drei` to control scene lighting and background.
+</ParamField>
+
+## State variables
+
+<ParamField path="state.targetPosition" type="number[]" default="[0, 0, 0]">
+  The `[x, y, z]` world-space position the scene group animates toward when the desk is clicked. Set by `handleMeshClick` and driven by the current aspect ratio.
+</ParamField>
+
+<ParamField path="state.targetRotation" type="number[]" default="[0, -Math.PI/2 + 0.5, 0]">
+  The `[x, y, z]` Euler rotation the scene group animates toward. Adjusted per-click to face the monitor.
+</ParamField>
+
+<ParamField path="state.matrixRotation" type="number[]" default="[0, 0, 0]">
+  Passed to `PresentationControls` as the `rotation` prop. Reset to `[0, 0, 0]` on click so the orbit handle starts from a known orientation.
+</ParamField>
+
+<ParamField path="state.isRotatable" type="boolean" default="true">
+  Enables or disables `PresentationControls` dragging. Set to `false` after the user clicks in so they cannot accidentally orbit while reading the monitor.
+</ParamField>
+
+## GLTF loading
+
+The bedroom model is loaded with `useGLTF` from `@react-three/drei`:
+
+```jsx gltf-load.jsx
+import { useGLTF } from '@react-three/drei';
+import computerScene from '../assets/3d/bedroom.glb';
+
+const { nodes, materials } = useGLTF(computerScene);
+```
+
+`nodes` contains every named mesh in the GLB file. `materials` contains all PBR materials. Both are destructured and applied directly to `<mesh>` elements in the JSX.
+
+<Note>
+  `useGLTF` caches the parsed model globally. Unmounting and remounting `Computer` does not trigger a second network request.
+</Note>
+
+## Embedded monitor iframe
+
+The portfolio website is projected onto the in-scene monitor using `@react-three/drei`'s `<Html>` component in `transform` mode:
+
+```jsx monitor-iframe.jsx
+<Html
+  wrapperClass="monitor"
+  position={[-1.93, 1.245, -0.479]}
+  transform
+  rotation={[1.6, 1.67, -1.6]}
+  distanceFactor={0.236}
+>
+  <iframe
+    seamless
+    frameBorder={0}
+    loading="lazy"
+    src="https://namith.vercel.app/"
+  />
+</Html>
+```
+
+| Prop | Value | Purpose |
+|---|---|---|
+| `position` | `[-1.93, 1.245, -0.479]` | World-space anchor aligns the HTML plane with the monitor mesh |
+| `rotation` | `[1.6, 1.67, -1.6]` | Euler rotation matching the monitor face |
+| `distanceFactor` | `0.236` | Scales the HTML element relative to camera distance |
+| `src` | `https://namith.vercel.app/` | Live portfolio embedded via iframe |
+
+<Warning>
+  The iframe loads an external URL. In production, ensure the target site sets appropriate `X-Frame-Options` / `Content-Security-Policy` headers that permit embedding.
+</Warning>
+
+## PresentationControls
+
+The entire scene group is wrapped in `<PresentationControls>` for touch-friendly orbit:
+
+```jsx presentation-controls.jsx
+<PresentationControls
+  polar={[-Math.PI / 8, Math.PI / 8]}
+  snap={true}
+  cursor={true}
+  rotation={matrixRotation}
+  enabled={isRotatable}
+>
+```
+
+| Prop | Value | Effect |
+|---|---|---|
+| `polar` | `[-π/8, π/8]` | Clamps vertical drag to ±22.5° so the floor is never visible |
+| `snap` | `true` | Returns to the rest rotation when the user releases the drag |
+| `cursor` | `true` | Swaps cursor to a grab icon while dragging |
+| `rotation` | `matrixRotation` | Controlled rotation; reset to `[0,0,0]` on click |
+| `enabled` | `isRotatable` | Disabled when zoomed into the monitor |
+
+## Mesh inventory
+
+All meshes belong to a single clickable `<group>` rooted at `rotation={[Math.PI/2, 0, 0]} scale={0.01}`. Clicking anywhere in this group triggers the zoom animation.
+
+| Mesh name (node key) | Material | Description |
+|---|---|---|
+| `Cube010_Material006_0` | `Material.006` | Desk surface |
+| `Cube015_Material005_0` | `Material.005` | Monitor |
+| `Cube017_Material004_0` | `Material.004` | CPU tower |
+| `Cube018_Material007_0` | `Material.007` | Keyboard |
+| *(chair)* | — | Office chair |
+| *(dustbin)* | — | Waste bin beside desk |
+| *(bed)* | — | Bed with mattress |
+| *(AC)* | — | Air conditioning unit |
+| *(bedside table)* | — | Nightstand |
+| *(shelf)* | — | Wall shelf |
+| *(lamp)* | — | Desk or floor lamp |
+| *(beanbag)* | — | Bean bag chair |
+| *(floor / walls / door)* | — | Room structure meshes outside the clickable group |
+
+<Note>
+  Floor, walls, and door meshes sit outside the clickable `<group>` and are not interactive.
+</Note>
+
+## Click handler and aspect ratio breakpoints
+
+When the desk group is clicked, `handleMeshClick` is called with a position that depends on the current viewport aspect ratio so the camera frames the monitor correctly on all screen sizes:
+
+```jsx click-handler.jsx
+group.onClick(() => {
+  const aspectRatio = window.innerWidth / window.innerHeight;
+  let positionArray;
+
+  if      (aspectRatio > 1.62)   positionArray = [-0.84, -0.272,  1.42]; // wide landscape
+  else if (aspectRatio > 0.6666) positionArray = [-0.83, -0.1,    1   ]; // standard 4:3 / 16:9
+  else                            positionArray = [-0.85,  0,      0.5 ]; // portrait / square
+
+  handleMeshClick(positionArray, [0.13, -Math.PI / 2, 0], [0, 0, 0]);
+});
+```
+
+| Condition | Position | Typical device |
+|---|---|---|
+| `aspectRatio > 1.62` | `[-0.84, -0.272, 1.42]` | Ultra-wide / 21:9 monitors |
+| `0.6666 < ratio ≤ 1.62` | `[-0.83, -0.1, 1]` | Standard 16:9 / 4:3 screens |
+| `ratio ≤ 0.6666` | `[-0.85, 0, 0.5]` | Portrait phones / tablets |
+
+## GSAP animations
+
+`gsap.to` is used to smoothly animate the scene group's position and rotation after a click:
+
+```jsx gsap-animation.jsx
+gsap.to(controlsRef.current.position, {
+  x: targetPosition[0],
+  y: targetPosition[1],
+  z: targetPosition[2],
+  duration: 1,
+});
+
+gsap.to(controlsRef.current.rotation, {
+  x: targetRotation[0],
+  y: targetRotation[1],
+  z: targetRotation[2],
+  duration: 1,
+});
+```
+
+Both tweens use `duration: 1` (one second). They run inside a `useEffect` that watches `[targetPosition, targetRotation]`, so any state change triggers a fresh tween.
+
+## Escape key handler
+
+Pressing `Escape` resets the scene to its initial state and restores the HUD overlay:
+
+```jsx escape-handler.jsx
+const handleKeyDown = (e) => {
+  if (e.key === 'Escape') {
+    setTargetPosition([0, 0, 0]);
+    setTargetRotation([0, -Math.PI / 2 + 0.5, 0]);
+    setMatrixRotation([0, 0, 0]);
+    setRotation(true);    // re-enable PresentationControls
+    showDetails(true);    // show HUD overlay
+  }
+};
+
+window.addEventListener('keydown', handleKeyDown);
+return () => window.removeEventListener('keydown', handleKeyDown);
+```
+
+## Resize and orientation handler
+
+A `resize` / `orientationchange` listener keeps the zoom position correct if the user rotates their device while zoomed in:
+
+```jsx resize-handler.jsx
+const handleResize = () => {
+  if (!isRotatable) { // only recalculate if currently zoomed in
+    const aspectRatio = window.innerWidth / window.innerHeight;
+
+    if      (aspectRatio > 1.62)   setTargetPosition([-0.84, -0.272,  1.42]);
+    else if (aspectRatio > 0.6666) setTargetPosition([-0.83, -0.1,    1   ]);
+    else                            setTargetPosition([-0.85,  0,      0.5 ]);
+  }
+};
+
+window.addEventListener('resize',            handleResize);
+window.addEventListener('orientationchange', handleResize);
+return () => {
+  window.removeEventListener('resize',            handleResize);
+  window.removeEventListener('orientationchange', handleResize);
+};
+```
+
+The three breakpoints mirror those in the click handler, ensuring the animation target stays consistent across orientation changes.
+
+<Tip>
+  Because `isRotatable` is `false` while zoomed in, the resize handler is effectively a no-op when the user is browsing the room in its default state.
+</Tip>

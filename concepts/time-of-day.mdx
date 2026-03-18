@@ -1,0 +1,118 @@
+---
+title: 'Time of day lighting'
+description: 'How the scene adapts its lighting to the current time using @react-three/drei Environment presets.'
+---
+
+## Overview
+
+The 3D scene uses image-based lighting (IBL) that automatically reflects the time of day on the visitor's device. When the page loads, the current hour is read from `new Date()` and mapped to one of five `@react-three/drei` `Environment` presets. Visitors can also manually change the time period via a dropdown in the UI overlay.
+
+## The `getPeriodOfDay` function
+
+The mapping from hour to preset is defined in `Home.jsx`:
+
+```jsx src/pages/Home.jsx
+const getPeriodOfDay = (hours) => {
+  if (hours >= 5 && hours < 7)  return 'sunset';
+  if (hours >= 7 && hours < 12) return 'park';
+  if (hours >= 12 && hours < 17) return 'warehouse';
+  if (hours >= 17 && hours < 19) return 'dawn';
+  return 'night';
+};
+```
+
+The function takes a 24-hour integer (0–23) and returns a string that is passed directly to `<Environment preset={...} />`.
+
+## Hour-to-preset mapping
+
+| Hour range | Environment preset | Display label |
+|------------|--------------------|---------------|
+| 5:00 – 6:59 | `sunset` | Dawn |
+| 7:00 – 11:59 | `park` | Morning |
+| 12:00 – 16:59 | `warehouse` | Evening |
+| 17:00 – 18:59 | `dawn` | Dusk |
+| 0:00 – 4:59 and 19:00 – 23:59 | `night` | Night |
+
+<Note>
+  The display labels shown in the UI overlay differ from the underlying preset names. For example, the `sunset` preset is labelled "Dawn" in the interface because it produces soft, low-angle warm light appropriate for early morning.
+</Note>
+
+## State initialization and the real-time clock
+
+Both `periodOfDay` and the displayed clock are initialized from `new Date()` and updated every second with `setInterval`:
+
+```jsx src/pages/Home.jsx
+const [currentTime, setCurrentTime] = useState(new Date());
+const [periodOfDay, setPeriodOfDay] = useState(
+  getPeriodOfDay(currentTime.getHours())
+);
+
+useEffect(() => {
+  const interval = setInterval(() => {
+    setCurrentTime(new Date());
+  }, 1000);
+  return () => clearInterval(interval);
+}, []);
+```
+
+The clock in the UI overlay reads from `currentTime`, while `periodOfDay` is only recalculated when the user manually selects a different time period or when the page first loads.
+
+## Changing the time period
+
+When the user selects a different time period from the dropdown, the scene does not switch immediately. Instead, a brief transition plays first:
+
+1. `changingTime` state is set to `true`.
+2. The `<Canvas>` is unmounted and replaced by `<ChangingTimeOverlay />`.
+3. The overlay displays a clock GIF (`clock.gif`) on a black background for approximately 2 seconds.
+4. After the timeout, `changingTime` is set to `false` and `periodOfDay` is updated to the new value.
+5. The `<Canvas>` remounts with the new environment preset.
+
+```jsx src/pages/Home.jsx
+{!isLoading ? (
+  changingTime ? (
+    <ChangingTimeOverlay />
+  ) : (
+    <Canvas id="canvas" colorManagement={false}>
+      <MyCameraReactsToStateChanges />
+      <directionalLight />
+      <Computers showDetails={showFunction} periodOfDay={periodOfDay} />
+    </Canvas>
+  )
+) : (
+  <Loader />
+)}
+```
+
+<Tip>
+  Unmounting and remounting the `<Canvas>` on time change ensures the Three.js renderer and all GPU resources are cleanly reset before the new environment preset loads. This avoids visual glitches from hot-swapping HDRI textures at runtime.
+</Tip>
+
+## Applying the preset
+
+Inside `Computer.jsx`, the `periodOfDay` prop is forwarded directly to the `<Environment>` component:
+
+```jsx src/models/Computer.jsx
+<Environment preset={periodOfDay} />
+```
+
+`@react-three/drei`'s `Environment` component loads the corresponding HDRI from its built-in set and applies it as the scene's background and lighting source. No additional configuration is required — swapping the `preset` string is sufficient to change the entire scene's look and feel.
+
+## Available presets reference
+
+<AccordionGroup>
+  <Accordion title="sunset">
+    Warm orange and pink tones. Used for the 5–7 AM "Dawn" period. Low-angle directional light simulating a sun just above the horizon.
+  </Accordion>
+  <Accordion title="park">
+    Bright, neutral daylight with green ambient fill from foliage. Used for the 7 AM–12 PM "Morning" period.
+  </Accordion>
+  <Accordion title="warehouse">
+    Cool industrial lighting with high contrast. Used for the 12–5 PM "Evening" period.
+  </Accordion>
+  <Accordion title="dawn">
+    Soft blue-purple twilight. Used for the 5–7 PM "Dusk" period.
+  </Accordion>
+  <Accordion title="night">
+    Dark environment with minimal ambient light. Used for all hours outside the four named periods (7 PM–5 AM).
+  </Accordion>
+</AccordionGroup>

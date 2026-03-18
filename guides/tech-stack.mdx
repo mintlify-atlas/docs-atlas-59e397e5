@@ -1,0 +1,126 @@
+---
+title: 'Tech stack'
+description: 'Libraries and tools that power the 3D portfolio.'
+keywords: ['Vite', 'React', 'Three.js', 'react-three-fiber', 'drei', 'GSAP', 'Tailwind', 'tech stack']
+---
+
+A concise overview of every dependency in the project.
+
+## Overview
+
+<Columns cols={2}>
+  <Card title="Vite 5" icon="bolt">
+    Build tool and dev server. Provides HMR, fast cold starts via native ESM, and optimized production bundles via Rollup.
+  </Card>
+  <Card title="React 18" icon="react">
+    UI framework. Used for the 2D overlay (name, title, social links, environment selector) and as the host for the 3D canvas.
+  </Card>
+  <Card title="@react-three/fiber 8" icon="cube">
+    React renderer for Three.js. Mounts a `<Canvas>` and lets you describe the 3D scene declaratively with JSX.
+  </Card>
+  <Card title="@react-three/drei 9" icon="star">
+    Helper library for react-three/fiber. Provides `Environment`, `PresentationControls`, `Html`, `useGLTF`, and `useProgress`.
+  </Card>
+  <Card title="GSAP 3" icon="play">
+    Animation library. Used to tween camera/object position and rotation with `duration: 1` easing when the user clicks on the PC.
+  </Card>
+  <Card title="React Router DOM 6" icon="map">
+    Client-side routing with `BrowserRouter`. Manages navigation between `/` (the 3D room) and `/projects`.
+  </Card>
+  <Card title="Tailwind CSS 3" icon="paintbrush">
+    Utility-first CSS framework. Styles the 2D overlay elements (name card, buttons, dropdown) without writing custom CSS.
+  </Card>
+  <Card title="react-responsive" icon="mobile">
+    Responsive breakpoint hook. Used to conditionally render the mobile or desktop loader image at the `≤768px` breakpoint.
+  </Card>
+</Columns>
+
+## Core 3D libraries
+
+### @react-three/fiber 8
+
+Fiber is the foundation of the 3D scene. It creates a `<Canvas>` element backed by a WebGL renderer and maps React component lifecycle to Three.js object creation and disposal.
+
+Key usage in this project:
+
+- `<Canvas>` in `src/models/Computer.jsx` (or the parent that renders it) sets up the WebGL context.
+- All mesh, light, and group elements (`<mesh>`, `<ambientLight>`, `<group>`) are fiber primitives that map directly to Three.js objects.
+
+### @react-three/drei 9
+
+Drei provides high-level abstractions on top of fiber:
+
+| Component / hook | Where used | Purpose |
+|---|---|---|
+| `useGLTF` | `src/models/Computer.jsx` | Loads and caches `bedroom.glb`. Returns `{ nodes, materials, scene }`. |
+| `useProgress` | `src/components/Loader.jsx` | Reports GLTF load progress (0–100) to drive the loading bar. |
+| `Environment` | `src/models/Computer.jsx` | Sets an HDR environment map (`preset` prop) that lights and reflects on the scene. |
+| `PresentationControls` | `src/models/Computer.jsx` | Wraps the model with mouse-drag orbit controls constrained to a range. |
+| `Html` | `src/models/Computer.jsx` | Projects a DOM element (`<iframe>`) into 3D space, attached to the monitor mesh. |
+
+### GSAP 3
+
+GSAP animates camera and object transforms when the user interacts with the scene.
+
+```js src/models/Computer.jsx
+// Example: zoom into the monitor when clicked
+gsap.to(camera.position, {
+  x: targetX,
+  y: targetY,
+  z: targetZ,
+  duration: 1,
+});
+```
+
+The `duration: 1` (one second) is used consistently for zoom-in and zoom-out transitions.
+
+## Routing
+
+### react-router-dom 6
+
+The app uses `BrowserRouter` with two routes:
+
+| Path | Component | Description |
+|---|---|---|
+| `/` | `src/pages/Home.jsx` | Full 3D room experience |
+| `/projects` | `src/pages/Projects.jsx` | Placeholder — currently renders `<div>Projects</div>` |
+
+<Note>
+If you deploy to GitHub Pages, `BrowserRouter` requires a server-side rewrite rule or a `404.html` workaround. See the [deployment guide](/guides/deployment) for details.
+</Note>
+
+## Styling
+
+### Tailwind CSS 3
+
+Tailwind utility classes style the 2D overlay that appears over the 3D canvas. It is configured with `autoprefixer` in `postcss.config.js` (standard Vite + Tailwind setup). No custom `tailwind.config.js` theme extensions are required by the base project.
+
+The retro font is applied inline via `style={{ fontFamily: 'retro' }}` because Tailwind's JIT mode would need an explicit safelist entry for custom font families — the inline style avoids that complexity.
+
+## Available but not yet actively used
+
+These packages are listed in `dependencies` but serve as ready-to-use building blocks for future enhancements:
+
+| Package | Version | Potential use |
+|---|---|---|
+| `@react-spring/three` | ^9.7.3 | Physics-based spring animations on 3D objects |
+| `@rive-app/react-canvas` / `rive-react` | ^4.11.3 | Interactive Rive animations embedded in the scene or UI |
+| `react-responsive` | ^10.0.0 | Currently used for the loader image breakpoint; can be expanded for fully responsive 3D layouts |
+
+## Developer tooling
+
+| Tool | Version | Purpose |
+|---|---|---|
+| Vite | ^5.2.0 | Dev server, HMR, production build |
+| ESLint | ^8.57.0 | Linting with `react`, `react-hooks`, and `react-refresh` plugins |
+| `@vitejs/plugin-react` | ^4.2.1 | Babel-based React fast refresh for Vite |
+| autoprefixer | ^10.4.19 | PostCSS plugin to add vendor prefixes for Tailwind output |
+| TypeScript types | `@types/react`, `@types/react-dom` | Type hints in editors (project uses JSX, not TSX) |
+
+Run the linter with:
+
+```bash
+npm run lint
+```
+
+The lint script is configured with `--max-warnings 0`, so any warning is treated as an error in CI.

@@ -1,0 +1,229 @@
+---
+title: 'Customizing the portfolio'
+description: 'How to make this 3D portfolio your own — update personal details, portfolio URL, and styling.'
+keywords: ['customization', 'personal info', 'iframe', 'font', 'SEO', 'loading screen']
+---
+
+This guide walks through every change you need to make the portfolio your own: swapping the embedded site, updating your name and links, adjusting the time-of-day labels, changing the font, and replacing loading images.
+
+## Change the portfolio URL
+
+The monitor in the 3D scene displays an external site inside an `<iframe>`. The source URL is set in `src/models/Computer.jsx`.
+
+```jsx src/models/Computer.jsx
+// Before
+<Html
+  wrapperClass='monitor'
+  position={[-1.93, 1.245, -0.479]}
+  transform
+  rotation={[1.6, 1.67, -1.6]}
+  distanceFactor={0.236}
+>
+  <iframe
+    seamless
+    frameBorder={0}
+    loading='lazy'
+    src="https://namith.vercel.app/"
+  />
+</Html>
+
+// After — replace with your own URL
+<Html
+  wrapperClass='monitor'
+  position={[-1.93, 1.245, -0.479]}
+  transform
+  rotation={[1.6, 1.67, -1.6]}
+  distanceFactor={0.236}
+>
+  <iframe
+    seamless
+    frameBorder={0}
+    loading='lazy'
+    src="https://your-portfolio.vercel.app/"
+  />
+</Html>
+```
+
+<Warning>
+The embedded site must allow iframes. If the target server sends `X-Frame-Options: DENY` or a restrictive `Content-Security-Policy: frame-ancestors` header, the monitor will show a blank screen. Test by opening the URL in a browser and checking the network response headers.
+</Warning>
+
+## Update personal info
+
+Your name, job title, and social links are rendered in `src/pages/Home.jsx`.
+
+```jsx src/pages/Home.jsx
+// Name — change "Namith Nimlaka" to your name
+<div
+  className="bg-black text-white p-2 text-3xl text-center"
+  style={{ fontFamily: 'retro' }}
+>
+  Your Name Here
+</div>
+
+// Job title — change "Software Engineer" to your title
+<div
+  className="bg-black text-white p-2 text-lg text-center"
+  style={{ fontFamily: 'retro' }}
+>
+  Your Title Here
+</div>
+
+// GitHub link — replace the href
+<a
+  href="https://github.com/your-username"
+  target="_blank"
+  rel="noopener noreferrer"
+>
+  {/* github icon */}
+</a>
+
+// LinkedIn link — replace the href
+<a
+  href="https://linkedin.com/in/your-username"
+  target="_blank"
+  rel="noopener noreferrer"
+>
+  {/* linkedin icon */}
+</a>
+```
+
+## Change time-of-day labels
+
+The environment changes based on the time of day. The `getPeriodOfDay` function in `src/models/Computer.jsx` maps hour ranges to environment preset names.
+
+```js src/models/Computer.jsx
+const getPeriodOfDay = (hours) => {
+  if (hours >= 5  && hours < 7)  return 'sunset';    // 5 AM – 7 AM
+  if (hours >= 7  && hours < 12) return 'park';      // 7 AM – 12 PM
+  if (hours >= 12 && hours < 17) return 'warehouse'; // 12 PM – 5 PM
+  if (hours >= 17 && hours < 19) return 'dawn';      // 5 PM – 7 PM
+  return 'night';                                    // 7 PM – 5 AM
+};
+```
+
+The valid preset names come from `@react-three/drei`'s `Environment` component. You can change which preset each time range uses to any of the supported values:
+
+```
+apartment | city | dawn | forest | lobby | night | park | studio | sunset | warehouse
+```
+
+The `<select>` dropdown in `Home.jsx` that lets users manually override the environment uses `<option>` values that must match these preset names exactly:
+
+```jsx src/pages/Home.jsx
+<select onChange={handleEnvironmentChange}>
+  <option value="sunset">Sunset</option>
+  <option value="park">Morning</option>
+  <option value="warehouse">Afternoon</option>
+  <option value="dawn">Evening</option>
+  <option value="night">Night</option>
+</select>
+```
+
+To add, remove, or rename options, edit both the `<option>` labels and the `value` attributes. The `value` must be a valid drei `Environment` preset string.
+
+## Update the page title and SEO meta
+
+The browser tab title and search-engine description are set in `index.html` at the project root.
+
+```html index.html
+<!-- Before -->
+<title>Namith's Room</title>
+<meta name="msapplication-TileColor" content="#9933ff">
+<meta name="description" content="Software Engineer with a Passion for Design and AI">
+
+<!-- After -->
+<title>Your Name's Room</title>
+<meta name="msapplication-TileColor" content="#9933ff">
+<meta name="description" content="Your own description for search engines">
+```
+
+<Tip>
+The `msapplication-TileColor` value controls the accent color on Windows Start tiles. Change `#9933ff` to any hex color that matches your brand.
+</Tip>
+
+## Swap the retro font
+
+The custom font is declared in `src/pages/Home.css` and loaded from `src/assets/fonts/retro.ttf`.
+
+<Steps>
+  <Step title="Replace the font file">
+    Copy your new `.ttf` (or `.woff2`) file into `src/assets/fonts/` and remove (or keep) `retro.ttf`.
+
+    ```
+    src/assets/fonts/
+    ├── retro.ttf        ← replace or remove
+    └── your-font.ttf   ← add your font here
+    ```
+  </Step>
+
+  <Step title="Update the @font-face declaration">
+    Edit the `@font-face` rule in `src/pages/Home.css`:
+
+    ```css src/pages/Home.css
+    /* Before */
+    @font-face {
+      font-family: 'retro';
+      src: url('../assets/fonts/retro.ttf') format('truetype');
+    }
+
+    /* After — using a woff2 file for better compression */
+    @font-face {
+      font-family: 'retro';
+      src: url('../assets/fonts/your-font.woff2') format('woff2'),
+           url('../assets/fonts/your-font.ttf') format('truetype');
+    }
+    ```
+
+    The `font-family` name `'retro'` is referenced throughout `Home.jsx` via `style={{ fontFamily: 'retro' }}`. If you keep the same name you do not need to touch any JSX.
+  </Step>
+
+  <Step title="Optional: rename the font family">
+    If you prefer a different family name, do a find-and-replace for `'retro'` across `Home.css` and `Home.jsx`.
+  </Step>
+</Steps>
+
+## Customize loading screen images
+
+The loading screen uses two images depending on viewport width.
+
+| File | Used when |
+|---|---|
+| `src/assets/images/loader.jpg` | Desktop (viewport > 768 px) |
+| `src/assets/images/loader-mobile.jpg` | Mobile (viewport ≤ 768 px) |
+
+These images are imported in `src/components/Loader.jsx`:
+
+```jsx src/components/Loader.jsx
+import loaderImage       from '../assets/images/loader.jpg';
+import loaderMobileImage from '../assets/images/loader-mobile.jpg';
+```
+
+<Steps>
+  <Step title="Prepare your images">
+    - **Desktop**: use a 16:9 or wider aspect ratio, minimum 1920 × 1080 px. Keep the file size under 500 KB for fast initial load.
+    - **Mobile**: use a 9:16 portrait aspect ratio, minimum 750 × 1334 px.
+    - Both files should be saved as `.jpg` (or update the import paths if you use `.webp` or `.png`).
+  </Step>
+
+  <Step title="Replace the files">
+    Drop your new images into `src/assets/images/` with the same file names:
+
+    ```
+    src/assets/images/
+    ├── loader.jpg         ← replace with your desktop image
+    └── loader-mobile.jpg  ← replace with your mobile image
+    ```
+
+    Vite will automatically pick up the new files on the next dev server restart or build.
+  </Step>
+
+  <Step title="Optional: change file format">
+    If you use `.webp` or `.png`, update the import statements in `src/components/Loader.jsx`:
+
+    ```jsx src/components/Loader.jsx
+    import loaderImage       from '../assets/images/loader.webp';
+    import loaderMobileImage from '../assets/images/loader-mobile.webp';
+    ```
+  </Step>
+</Steps>

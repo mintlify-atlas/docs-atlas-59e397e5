@@ -1,0 +1,216 @@
+---
+title: 'Adding assets'
+description: 'How to replace or add 3D models, images, icons, and fonts.'
+keywords: ['GLTF', 'glb', 'Blender', 'icons', 'images', 'fonts', 'favicon', 'assets']
+---
+
+All static assets live under `src/assets/`. This guide covers how to replace each category of asset and what else needs to change in the code when you do.
+
+<Tree>
+  <Tree.Folder name="src" defaultOpen>
+    <Tree.Folder name="assets" defaultOpen>
+      <Tree.Folder name="3d">
+        <Tree.File name="bedroom.glb" />
+      </Tree.Folder>
+      <Tree.Folder name="fonts">
+        <Tree.File name="retro.ttf" />
+      </Tree.Folder>
+      <Tree.Folder name="icons">
+        <Tree.File name="clock.gif" />
+        <Tree.File name="github.png" />
+        <Tree.File name="github.svg" />
+        <Tree.File name="home.gif" />
+        <Tree.File name="home2.gif" />
+        <Tree.File name="linkedin.png" />
+        <Tree.File name="linkedin.svg" />
+      </Tree.Folder>
+      <Tree.Folder name="images">
+        <Tree.File name="loader.jpg" />
+        <Tree.File name="loader-mobile.jpg" />
+      </Tree.Folder>
+    </Tree.Folder>
+  </Tree.Folder>
+</Tree>
+
+## Replacing the 3D model
+
+The scene is driven by a single GLTF binary file: `src/assets/3d/bedroom.glb`. It is loaded in `src/models/Computer.jsx` via `useGLTF` from `@react-three/drei`.
+
+```jsx src/models/Computer.jsx
+const { nodes, materials } = useGLTF('./assets/3d/bedroom.glb');
+```
+
+<Steps>
+  <Step title="Export a GLTF from Blender">
+    In Blender, go to **File → Export → glTF 2.0 (.glb/.gltf)**.
+
+    Recommended export settings:
+    - Format: **glTF Binary (.glb)** — single file, easier to manage.
+    - Include: check **Meshes**, **Materials**, and **Textures**.
+    - Compression: enable **Draco mesh compression** if file size is a concern (requires the `three/examples/jsm/loaders/DRACOLoader` setup).
+    - Transform: apply any pending rotations/scales before export so the scene loads in the correct orientation.
+  </Step>
+
+  <Step title="Replace the file">
+    Copy your new `.glb` into `src/assets/3d/` and name it `bedroom.glb`, or keep the old name and update the import path:
+
+    ```jsx src/models/Computer.jsx
+    // Option A — same filename, just drop the new file in place
+    const { nodes, materials } = useGLTF('./assets/3d/bedroom.glb');
+
+    // Option B — new filename
+    const { nodes, materials } = useGLTF('./assets/3d/my-room.glb');
+    ```
+  </Step>
+
+  <Step title="Update mesh and material references">
+    Node and material names in the destructured `nodes` and `materials` objects are taken directly from your Blender scene. When you swap the model these names will change.
+
+    In `Computer.jsx` the scene is built with JSX like:
+
+    ```jsx src/models/Computer.jsx
+    <mesh
+      geometry={nodes.Cube001_1.geometry}
+      material={materials['Material.001']}
+    />
+    ```
+
+    To find the correct names for your new model, add a temporary `console.log` after the `useGLTF` call:
+
+    ```jsx src/models/Computer.jsx
+    const { nodes, materials } = useGLTF('./assets/3d/bedroom.glb');
+    console.log('nodes:', Object.keys(nodes));
+    console.log('materials:', Object.keys(materials));
+    ```
+
+    Replace each `nodes.OldName` and `materials['OldMaterial']` reference with the names logged for your new model.
+  </Step>
+
+  <Step title="Preload the model">
+    At the bottom of `Computer.jsx`, `useGLTF.preload` is called so the file starts downloading before the component mounts. Update it to match your new path:
+
+    ```jsx src/models/Computer.jsx
+    useGLTF.preload('./assets/3d/bedroom.glb');
+    ```
+  </Step>
+</Steps>
+
+<Note>
+Vite serves files from `public/` at the root URL and files from `src/` via the module graph. `useGLTF` with a path starting `./assets/` resolves against the public root at runtime. Keep the `.glb` file under `src/assets/3d/` and ensure Vite's asset handling is not filtering `.glb` files (the default config handles this correctly).
+</Note>
+
+## Swapping icons
+
+Icons are used in two places: the 2D overlay in `Home.jsx` and the loader screen in `Loader.jsx`.
+
+| File | Purpose |
+|---|---|
+| `clock.gif` | Animated clock shown in the time-of-day overlay |
+| `home.gif` | Animated icon used on the loader screen |
+| `home2.gif` | Alternative home icon (secondary loader state) |
+| `github.png` / `github.svg` | GitHub link button in the sidebar |
+| `linkedin.png` / `linkedin.svg` | LinkedIn link button in the sidebar |
+
+To replace any icon, drop the new file into `src/assets/icons/` using the same filename. Vite will pick it up automatically.
+
+If you need to use a different filename, update the corresponding import in `Home.jsx` or `Loader.jsx`:
+
+```jsx
+// Example: renaming the GitHub icon
+import githubIcon from '../assets/icons/my-github-icon.svg';
+```
+
+<Tip>
+SVG files are preferred over PNG for icons because they scale without quality loss and usually have smaller file sizes. Both `.png` and `.svg` variants are included for the social icons — use whichever format you replace.
+</Tip>
+
+## Swapping loader background images
+
+The full-screen loading background uses responsive images imported in `src/components/Loader.jsx`.
+
+| File | Shown when | Recommended size |
+|---|---|---|
+| `loader.jpg` | Viewport width > 768 px | 1920 × 1080 px (16:9), < 500 KB |
+| `loader-mobile.jpg` | Viewport width ≤ 768 px | 750 × 1334 px (9:16), < 300 KB |
+
+The breakpoint is controlled by `react-responsive`:
+
+```jsx src/components/Loader.jsx
+import { useMediaQuery } from 'react-responsive';
+const isMobile = useMediaQuery({ maxWidth: 768 });
+
+const src = isMobile ? loaderMobileImage : loaderImage;
+```
+
+Drop replacement files into `src/assets/images/` using the same filenames. If you prefer WebP for better compression:
+
+```jsx src/components/Loader.jsx
+import loaderImage       from '../assets/images/loader.webp';
+import loaderMobileImage from '../assets/images/loader-mobile.webp';
+```
+
+## Font replacement
+
+The retro font is declared once in `src/pages/Home.css` and referenced by name throughout `Home.jsx`.
+
+```css src/pages/Home.css
+@font-face {
+  font-family: 'retro';
+  src: url('../assets/fonts/retro.ttf') format('truetype');
+}
+```
+
+To use a different font:
+
+1. Add the new font file to `src/assets/fonts/`.
+2. Update the `src` path (and optionally the `format`) in the `@font-face` block.
+3. Keep `font-family: 'retro'` unchanged so that all `style={{ fontFamily: 'retro' }}` usages in `Home.jsx` continue to work — or do a global rename if you prefer a different family name.
+
+```css src/pages/Home.css
+/* Example: switching to a woff2 font */
+@font-face {
+  font-family: 'retro';
+  src: url('../assets/fonts/my-font.woff2') format('woff2'),
+       url('../assets/fonts/my-font.ttf')   format('truetype');
+  font-display: swap;
+}
+```
+
+<Tip>
+Adding `font-display: swap` reduces flash of invisible text during font load — a worthwhile addition.
+</Tip>
+
+## Public assets and favicons
+
+Favicons and web-app manifest icons are stored in the `public/favicon/` folder and referenced in `index.html`. These are served at the root URL without going through Vite's module bundler.
+
+To regenerate favicons:
+
+<Steps>
+  <Step title="Create a source image">
+    Prepare a square PNG at least 512 × 512 px with your logo or avatar.
+  </Step>
+
+  <Step title="Generate favicon files">
+    Use a favicon generator such as [realfavicongenerator.net](https://realfavicongenerator.net) or [favicon.io](https://favicon.io). Download the generated package.
+  </Step>
+
+  <Step title="Replace the files in public/favicon/">
+    Drop all generated files into `public/favicon/`, overwriting the existing ones. Common files include:
+
+    ```
+    public/favicon/
+    ├── favicon.ico
+    ├── favicon-16x16.png
+    ├── favicon-32x32.png
+    ├── apple-touch-icon.png
+    ├── android-chrome-192x192.png
+    ├── android-chrome-512x512.png
+    └── site.webmanifest
+    ```
+  </Step>
+
+  <Step title="Verify index.html link tags">
+    Check that the `<link>` tags in `index.html` match the filenames in `public/favicon/`. Update any paths that differ.
+  </Step>
+</Steps>
