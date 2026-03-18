@@ -90,9 +90,9 @@ Your name, job title, and social links are rendered in `src/pages/Home.jsx`.
 
 ## Change time-of-day labels
 
-The environment changes based on the time of day. The `getPeriodOfDay` function in `src/models/Computer.jsx` maps hour ranges to environment preset names.
+The environment changes based on the time of day. The `getPeriodOfDay` function in `src/pages/Home.jsx` maps hour ranges to environment preset names.
 
-```js src/models/Computer.jsx
+```js src/pages/Home.jsx
 const getPeriodOfDay = (hours) => {
   if (hours >= 5  && hours < 7)  return 'sunset';    // 5 AM – 7 AM
   if (hours >= 7  && hours < 12) return 'park';      // 7 AM – 12 PM
@@ -111,12 +111,17 @@ apartment | city | dawn | forest | lobby | night | park | studio | sunset | ware
 The `<select>` dropdown in `Home.jsx` that lets users manually override the environment uses `<option>` values that must match these preset names exactly:
 
 ```jsx src/pages/Home.jsx
-<select onChange={handleEnvironmentChange}>
-  <option value="sunset">Sunset</option>
+<select
+  value={periodOfDay}
+  onChange={(e) => handlePeriodOfDayChange(e)}
+  className="bg-black text-white appearance-none outline-none w-full pl-4 pr-6"
+  style={{ fontFamily: 'retro' }}
+>
+  <option value="sunset">Dawn</option>
   <option value="park">Morning</option>
-  <option value="warehouse">Afternoon</option>
-  <option value="dawn">Evening</option>
-  <option value="night">Night</option>
+  <option value="warehouse">Evening</option>
+  <option value="dawn">Dusk</option>
+  <option value="night">Nightsly</option>
 </select>
 ```
 

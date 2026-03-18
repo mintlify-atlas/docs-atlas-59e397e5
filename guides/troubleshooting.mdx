@@ -17,14 +17,14 @@ If something is not working, find your symptom below.
     2. Open the browser DevTools **Network** tab and look for a failed request to `bedroom.glb` (status 404).
     3. Check the **Console** tab for errors from `useGLTF`.
 
-    The model loads asynchronously via `useGLTF('./assets/3d/bedroom.glb')`. Until it resolves, the `<Loader>` component is shown. If the file is missing, the loader will hang indefinitely without an error message in the UI.
+    The model loads asynchronously via `useGLTF(computerScene)` where `computerScene` is imported from `../assets/3d/bedroom.glb`. Until it resolves, the `<Loader>` component is shown. If the file is missing, the loader will hang indefinitely without an error message in the UI.
 
-    **Fix:** Ensure the `.glb` file is in `src/assets/3d/` and that the path string in `Computer.jsx` matches exactly:
+    **Fix:** Ensure the `.glb` file is in `src/assets/3d/` and that the import in `Computer.jsx` resolves correctly:
 
     ```jsx src/models/Computer.jsx
-    const { nodes, materials } = useGLTF('./assets/3d/bedroom.glb');
-    // ...
-    useGLTF.preload('./assets/3d/bedroom.glb');
+    import computerScene from '../assets/3d/bedroom.glb';
+
+    const { nodes, materials } = useGLTF(computerScene);
     ```
   </Accordion>
 
@@ -65,11 +65,15 @@ If something is not working, find your symptom below.
 
     If the overlay persists indefinitely:
     1. Open DevTools and check for JavaScript errors that may have stopped the `setTimeout` callback.
-    2. Confirm the `setTimeout` that resets `changingTime` is called with `2000`:
+    2. Confirm the `useEffect` in `Home.jsx` that resets `changingTime` is working correctly:
 
-    ```js src/models/Computer.jsx
-    setChangingTime(true);
-    setTimeout(() => setChangingTime(false), 2000);
+    ```js src/pages/Home.jsx
+    useEffect(() => {
+      if (changingTime) {
+        const timeoutId = setTimeout(() => setChangingTime(false), 2000);
+        return () => clearTimeout(timeoutId);
+      }
+    }, [changingTime]);
     ```
 
     If the preset name passed to `<Environment preset={...} />` is not a valid drei preset string, Three.js may throw and leave the component in a broken state. Valid values are:
@@ -113,12 +117,16 @@ If something is not working, find your symptom below.
     1. Confirm the viewport meta tag is present in `index.html`:
 
     ```html index.html
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     ```
 
-    The `viewport-fit=cover` value is required for `env(safe-area-inset-bottom)` to return a non-zero value on notched/gesture-nav devices.
+    If content is still being cut off on notched devices, you can add `viewport-fit=cover` to the viewport meta tag to enable `env(safe-area-inset-bottom)` support on iOS:
 
-    2. If the layout still breaks on a specific device, check whether `react-responsive` is correctly detecting the viewport width. The `≤768px` breakpoint switches between `loader.jpg` and `loader-mobile.jpg`.
+    ```html index.html
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    ```
+
+    2. If the layout still breaks on a specific device, check whether `window.innerWidth` is correctly reported. The `≤768px` check in `Loader.jsx` switches between `loader.jpg` and `loader-mobile.jpg`.
   </Accordion>
 </AccordionGroup>
 

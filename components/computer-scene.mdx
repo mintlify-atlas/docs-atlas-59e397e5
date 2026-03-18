@@ -132,17 +132,23 @@ All meshes belong to a single clickable `<group>` rooted at `rotation={[Math.PI/
 
 When the desk group is clicked, `handleMeshClick` is called with a position that depends on the current viewport aspect ratio so the camera frames the monitor correctly on all screen sizes:
 
-```jsx click-handler.jsx
-group.onClick(() => {
+```jsx src/models/Computer.jsx
+<group onClick={() => {
   const aspectRatio = window.innerWidth / window.innerHeight;
-  let positionArray;
+  let positionArray = [0, 0, 0];
 
-  if      (aspectRatio > 1.62)   positionArray = [-0.84, -0.272,  1.42]; // wide landscape
-  else if (aspectRatio > 0.6666) positionArray = [-0.83, -0.1,    1   ]; // standard 4:3 / 16:9
-  else                            positionArray = [-0.85,  0,      0.5 ]; // portrait / square
+  if (aspectRatio > 1.62) {
+    positionArray = [-0.84, -0.272, 1.42]; // wide landscape
+  } else if (aspectRatio > 0.6666) {
+    positionArray = [-0.83, -0.1, 1];      // standard 4:3 / 16:9
+  } else {
+    positionArray = [-0.85, 0, 0.5];       // portrait / square
+  }
 
   handleMeshClick(positionArray, [0.13, -Math.PI / 2, 0], [0, 0, 0]);
-});
+}}>
+  {/* desk, monitor, cpu, keyboard, chair, dustbin meshes */}
+</group>
 ```
 
 | Condition | Position | Typical device |

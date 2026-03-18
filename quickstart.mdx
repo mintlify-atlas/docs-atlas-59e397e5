@@ -7,14 +7,14 @@ description: 'Get the 3D portfolio running locally in under two minutes.'
 
 Before you begin, make sure you have the following installed:
 
-<Columns cols={2}>
+<CardGroup cols={2}>
   <Card title="Node.js 18+" icon="node">
     Download from [nodejs.org](https://nodejs.org). Run `node -v` to verify your version.
   </Card>
   <Card title="Git" icon="git-alt">
     Download from [git-scm.com](https://git-scm.com). Run `git --version` to verify.
   </Card>
-</Columns>
+</CardGroup>
 
 ## Set up the project
 
@@ -23,8 +23,8 @@ Before you begin, make sure you have the following installed:
     Clone the project to your local machine:
 
     ```bash
-    git clone https://github.com/namith/3d-portfolio.git
-    cd 3d-portfolio
+    git clone https://github.com/namith1003/3DPortfolio.git
+    cd 3DPortfolio
     ```
   </Step>
 
@@ -108,37 +108,33 @@ Replace `https://namith.vercel.app/` with the URL you want to display on the in-
 
 ## Project structure
 
-<Tree>
-  <Tree.Folder name="src" defaultOpen>
-    <Tree.File name="App.jsx" />
-    <Tree.Folder name="pages" defaultOpen>
-      <Tree.File name="Home.jsx" />
-      <Tree.File name="Home.css" />
-    </Tree.Folder>
-    <Tree.Folder name="models" defaultOpen>
-      <Tree.File name="Computer.jsx" />
-    </Tree.Folder>
-    <Tree.Folder name="components">
-      <Tree.File name="Loader.jsx" />
-    </Tree.Folder>
-    <Tree.Folder name="assets">
-      <Tree.Folder name="3d">
-        <Tree.File name="bedroom.glb" />
-      </Tree.Folder>
-      <Tree.Folder name="icons">
-        <Tree.File name="clock.gif" />
-        <Tree.File name="github.png" />
-        <Tree.File name="linkedin.png" />
-      </Tree.Folder>
-    </Tree.Folder>
-  </Tree.Folder>
-  <Tree.File name="package.json" />
-  <Tree.File name="vite.config.js" />
-</Tree>
+```
+src/
+├── App.jsx
+├── pages/
+│   ├── Home.jsx
+│   └── Home.css
+├── models/
+│   └── Computer.jsx
+├── components/
+│   └── Loader.jsx
+└── assets/
+    ├── 3d/bedroom.glb
+    ├── fonts/retro.ttf
+    ├── icons/
+    │   ├── clock.gif
+    │   ├── github.png
+    │   └── linkedin.png
+    └── images/
+        ├── loader.jpg
+        └── loader-mobile.jpg
+package.json
+vite.config.js
+```
 
 ## Next steps
 
-<Columns cols={3}>
+<CardGroup cols={3}>
   <Card title="3D scene" icon="cube" href="/concepts/3d-scene">
     Learn how the bedroom GLTF model is loaded and rendered.
   </Card>
@@ -148,4 +144,4 @@ Replace `https://namith.vercel.app/` with the URL you want to display on the in-
   <Card title="Interactions" icon="hand-pointer" href="/concepts/interactions">
     Explore click-to-zoom, keyboard navigation, and responsive camera logic.
   </Card>
-</Columns>
+</CardGroup>

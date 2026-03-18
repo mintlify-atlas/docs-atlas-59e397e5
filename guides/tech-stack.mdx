@@ -8,7 +8,7 @@ A concise overview of every dependency in the project.
 
 ## Overview
 
-<Columns cols={2}>
+<CardGroup cols={2}>
   <Card title="Vite 5" icon="bolt">
     Build tool and dev server. Provides HMR, fast cold starts via native ESM, and optimized production bundles via Rollup.
   </Card>
@@ -19,7 +19,7 @@ A concise overview of every dependency in the project.
     React renderer for Three.js. Mounts a `<Canvas>` and lets you describe the 3D scene declaratively with JSX.
   </Card>
   <Card title="@react-three/drei 9" icon="star">
-    Helper library for react-three/fiber. Provides `Environment`, `PresentationControls`, `Html`, `useGLTF`, and `useProgress`.
+    Helper library for react-three/fiber. Provides `Environment`, `PresentationControls`, `Html`, and `useGLTF`.
   </Card>
   <Card title="GSAP 3" icon="play">
     Animation library. Used to tween camera/object position and rotation with `duration: 1` easing when the user clicks on the PC.
@@ -31,9 +31,9 @@ A concise overview of every dependency in the project.
     Utility-first CSS framework. Styles the 2D overlay elements (name card, buttons, dropdown) without writing custom CSS.
   </Card>
   <Card title="react-responsive" icon="mobile">
-    Responsive breakpoint hook. Used to conditionally render the mobile or desktop loader image at the `≤768px` breakpoint.
+    Responsive breakpoint library. Available in dependencies for building responsive UI; the loader image breakpoint currently uses a plain `resize` event listener.
   </Card>
-</Columns>
+</CardGroup>
 
 ## Core 3D libraries
 
@@ -43,7 +43,7 @@ Fiber is the foundation of the 3D scene. It creates a `<Canvas>` element backed 
 
 Key usage in this project:
 
-- `<Canvas>` in `src/models/Computer.jsx` (or the parent that renders it) sets up the WebGL context.
+- `<Canvas>` in `src/pages/Home.jsx` sets up the WebGL context and hosts the 3D scene.
 - All mesh, light, and group elements (`<mesh>`, `<ambientLight>`, `<group>`) are fiber primitives that map directly to Three.js objects.
 
 ### @react-three/drei 9
@@ -53,7 +53,6 @@ Drei provides high-level abstractions on top of fiber:
 | Component / hook | Where used | Purpose |
 |---|---|---|
 | `useGLTF` | `src/models/Computer.jsx` | Loads and caches `bedroom.glb`. Returns `{ nodes, materials, scene }`. |
-| `useProgress` | `src/components/Loader.jsx` | Reports GLTF load progress (0–100) to drive the loading bar. |
 | `Environment` | `src/models/Computer.jsx` | Sets an HDR environment map (`preset` prop) that lights and reflects on the scene. |
 | `PresentationControls` | `src/models/Computer.jsx` | Wraps the model with mouse-drag orbit controls constrained to a range. |
 | `Html` | `src/models/Computer.jsx` | Projects a DOM element (`<iframe>`) into 3D space, attached to the monitor mesh. |
@@ -63,11 +62,11 @@ Drei provides high-level abstractions on top of fiber:
 GSAP animates camera and object transforms when the user interacts with the scene.
 
 ```js src/models/Computer.jsx
-// Example: zoom into the monitor when clicked
-gsap.to(camera.position, {
-  x: targetX,
-  y: targetY,
-  z: targetZ,
+// Animate the scene group position toward the monitor on click
+gsap.to(controlsRef.current.position, {
+  x: targetPosition[0],
+  y: targetPosition[1],
+  z: targetPosition[2],
   duration: 1,
 });
 ```
@@ -105,7 +104,7 @@ These packages are listed in `dependencies` but serve as ready-to-use building b
 |---|---|---|
 | `@react-spring/three` | ^9.7.3 | Physics-based spring animations on 3D objects |
 | `@rive-app/react-canvas` / `rive-react` | ^4.11.3 | Interactive Rive animations embedded in the scene or UI |
-| `react-responsive` | ^10.0.0 | Currently used for the loader image breakpoint; can be expanded for fully responsive 3D layouts |
+| `react-responsive` | ^10.0.0 | Available for responsive breakpoint hooks; can be used for fully responsive 3D layouts |
 
 ## Developer tooling
 

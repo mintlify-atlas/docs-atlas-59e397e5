@@ -6,39 +6,36 @@ keywords: ['GLTF', 'glb', 'Blender', 'icons', 'images', 'fonts', 'favicon', 'ass
 
 All static assets live under `src/assets/`. This guide covers how to replace each category of asset and what else needs to change in the code when you do.
 
-<Tree>
-  <Tree.Folder name="src" defaultOpen>
-    <Tree.Folder name="assets" defaultOpen>
-      <Tree.Folder name="3d">
-        <Tree.File name="bedroom.glb" />
-      </Tree.Folder>
-      <Tree.Folder name="fonts">
-        <Tree.File name="retro.ttf" />
-      </Tree.Folder>
-      <Tree.Folder name="icons">
-        <Tree.File name="clock.gif" />
-        <Tree.File name="github.png" />
-        <Tree.File name="github.svg" />
-        <Tree.File name="home.gif" />
-        <Tree.File name="home2.gif" />
-        <Tree.File name="linkedin.png" />
-        <Tree.File name="linkedin.svg" />
-      </Tree.Folder>
-      <Tree.Folder name="images">
-        <Tree.File name="loader.jpg" />
-        <Tree.File name="loader-mobile.jpg" />
-      </Tree.Folder>
-    </Tree.Folder>
-  </Tree.Folder>
-</Tree>
+```
+src/assets/
+├── 3d/
+│   └── bedroom.glb
+├── fonts/
+│   └── retro.ttf
+├── icons/
+│   ├── clock.gif
+│   ├── github.png
+│   ├── github.svg
+│   ├── home.gif
+│   ├── home2.gif
+│   ├── linkedin.png
+│   └── linkedin.svg
+└── images/
+    ├── loader.jpg
+    └── loader-mobile.jpg
+```
 
 ## Replacing the 3D model
 
 The scene is driven by a single GLTF binary file: `src/assets/3d/bedroom.glb`. It is loaded in `src/models/Computer.jsx` via `useGLTF` from `@react-three/drei`.
 
 ```jsx src/models/Computer.jsx
-const { nodes, materials } = useGLTF('./assets/3d/bedroom.glb');
+import computerScene from '../assets/3d/bedroom.glb';
+
+const { nodes, materials } = useGLTF(computerScene);
 ```
+
+The `.glb` file is imported as a module (not fetched by URL string). Vite hashes and bundles it into the `dist/` output automatically.
 
 <Steps>
   <Step title="Export a GLTF from Blender">
@@ -52,14 +49,16 @@ const { nodes, materials } = useGLTF('./assets/3d/bedroom.glb');
   </Step>
 
   <Step title="Replace the file">
-    Copy your new `.glb` into `src/assets/3d/` and name it `bedroom.glb`, or keep the old name and update the import path:
+    Copy your new `.glb` into `src/assets/3d/` and name it `bedroom.glb`, or update the import in `Computer.jsx`:
 
     ```jsx src/models/Computer.jsx
     // Option A — same filename, just drop the new file in place
-    const { nodes, materials } = useGLTF('./assets/3d/bedroom.glb');
+    import computerScene from '../assets/3d/bedroom.glb';
 
     // Option B — new filename
-    const { nodes, materials } = useGLTF('./assets/3d/my-room.glb');
+    import computerScene from '../assets/3d/my-room.glb';
+
+    const { nodes, materials } = useGLTF(computerScene);
     ```
   </Step>
 
@@ -70,33 +69,27 @@ const { nodes, materials } = useGLTF('./assets/3d/bedroom.glb');
 
     ```jsx src/models/Computer.jsx
     <mesh
-      geometry={nodes.Cube001_1.geometry}
-      material={materials['Material.001']}
+      castShadow
+      receiveShadow
+      geometry={nodes.Cube010_Material006_0.geometry}
+      material={materials['Material.006']}
     />
     ```
 
     To find the correct names for your new model, add a temporary `console.log` after the `useGLTF` call:
 
     ```jsx src/models/Computer.jsx
-    const { nodes, materials } = useGLTF('./assets/3d/bedroom.glb');
+    const { nodes, materials } = useGLTF(computerScene);
     console.log('nodes:', Object.keys(nodes));
     console.log('materials:', Object.keys(materials));
     ```
 
     Replace each `nodes.OldName` and `materials['OldMaterial']` reference with the names logged for your new model.
   </Step>
-
-  <Step title="Preload the model">
-    At the bottom of `Computer.jsx`, `useGLTF.preload` is called so the file starts downloading before the component mounts. Update it to match your new path:
-
-    ```jsx src/models/Computer.jsx
-    useGLTF.preload('./assets/3d/bedroom.glb');
-    ```
-  </Step>
 </Steps>
 
 <Note>
-Vite serves files from `public/` at the root URL and files from `src/` via the module graph. `useGLTF` with a path starting `./assets/` resolves against the public root at runtime. Keep the `.glb` file under `src/assets/3d/` and ensure Vite's asset handling is not filtering `.glb` files (the default config handles this correctly).
+The `.glb` file must live under `src/assets/` (not `public/`) so Vite processes it through the module graph. Importing it with `import` gives you the hashed, bundled URL that `useGLTF` fetches at runtime.
 </Note>
 
 ## Swapping icons
@@ -105,11 +98,11 @@ Icons are used in two places: the 2D overlay in `Home.jsx` and the loader screen
 
 | File | Purpose |
 |---|---|
-| `clock.gif` | Animated clock shown in the time-of-day overlay |
-| `home.gif` | Animated icon used on the loader screen |
-| `home2.gif` | Alternative home icon (secondary loader state) |
-| `github.png` / `github.svg` | GitHub link button in the sidebar |
-| `linkedin.png` / `linkedin.svg` | LinkedIn link button in the sidebar |
+| `clock.gif` | Animated clock shown in the `ChangingTimeOverlay` (the 2-second black transition when switching time of day) |
+| `home.gif` | Animated icon shown on the loader screen above the loading text |
+| `home2.gif` | Alternative home icon (not actively imported in current source) |
+| `github.png` / `github.svg` | GitHub link icon in the HUD overlay |
+| `linkedin.png` / `linkedin.svg` | LinkedIn link icon in the HUD overlay |
 
 To replace any icon, drop the new file into `src/assets/icons/` using the same filename. Vite will pick it up automatically.
 
@@ -133,13 +126,18 @@ The full-screen loading background uses responsive images imported in `src/compo
 | `loader.jpg` | Viewport width > 768 px | 1920 × 1080 px (16:9), < 500 KB |
 | `loader-mobile.jpg` | Viewport width ≤ 768 px | 750 × 1334 px (9:16), < 300 KB |
 
-The breakpoint is controlled by `react-responsive`:
+The breakpoint is detected using a `resize` event listener in `Loader.jsx`:
 
 ```jsx src/components/Loader.jsx
-import { useMediaQuery } from 'react-responsive';
-const isMobile = useMediaQuery({ maxWidth: 768 });
-
-const src = isMobile ? loaderMobileImage : loaderImage;
+const handleResize = () => {
+  if (window.innerWidth <= 768) {
+    setBackgroundImage(loaderMobileImage);
+  } else {
+    setBackgroundImage(loaderImage);
+  }
+};
+handleResize(); // run on mount
+window.addEventListener('resize', handleResize);
 ```
 
 Drop replacement files into `src/assets/images/` using the same filenames. If you prefer WebP for better compression:

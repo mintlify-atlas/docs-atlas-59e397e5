@@ -7,7 +7,7 @@ The `Home` component is the root of the portfolio experience. It wires together 
 
 ## Overview
 
-<Columns cols={3}>
+<CardGroup cols={3}>
   <Card title="3D canvas" icon="cube">
     Renders the bedroom scene via `@react-three/fiber`. Hidden while `isLoading` is true and replaced by `ChangingTimeOverlay` during time transitions.
   </Card>
@@ -17,7 +17,7 @@ The `Home` component is the root of the portfolio experience. It wires together 
   <Card title="HUD overlay" icon="layout-dashboard">
     Name badge, live clock, time-of-day selector, job title, and social links. Scales responsively and hides when the user zooms into the monitor.
   </Card>
-</Columns>
+</CardGroup>
 
 ## Camera hook
 
